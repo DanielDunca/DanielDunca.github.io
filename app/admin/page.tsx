@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Save, Eye, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
+
+const GITHUB_OWNER = "DanielDunca"
+const GITHUB_REPO = "DanielDunca.github.io"
+const GITHUB_BRANCH = "main"
 
 export default function AdminPage() {
   const [posts, setPosts] = useState([
@@ -40,6 +44,28 @@ export default function AdminPage() {
     author: "Your Name",
     image: "",
   })
+  const [githubToken, setGithubToken] = useState("")
+
+  useEffect(() => {
+    const stored = localStorage.getItem("blogPosts")
+    if (stored) {
+      setPosts(JSON.parse(stored))
+    } else {
+      fetch("/posts.json?cache=" + Date.now())
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            setPosts(data)
+            localStorage.setItem("blogPosts", JSON.stringify(data))
+          }
+        })
+        .catch((err) => console.error("Could not fetch posts.json", err))
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem("blogPosts", JSON.stringify(posts))
+  }, [posts])
 
   const handleSavePost = () => {
     const newPost = {
@@ -62,6 +88,45 @@ export default function AdminPage() {
 
   const handleDeletePost = (id: number) => {
     setPosts(posts.filter((post) => post.id !== id))
+  }
+
+  const syncToGitHub = async () => {
+    if (!githubToken) {
+      alert("Please enter a GitHub token with repo permissions")
+      return
+    }
+
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/posts.json`
+
+    try {
+      const getRes = await fetch(apiUrl, {
+        headers: { Authorization: `token ${githubToken}` },
+      })
+      const fileData = await getRes.json()
+      const sha = fileData.sha
+
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(posts, null, 2))))
+
+      const updateRes = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `token ${githubToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "Update posts from admin",
+          content,
+          sha,
+          branch: GITHUB_BRANCH,
+        }),
+      })
+
+      if (!updateRes.ok) throw new Error("GitHub update failed")
+      alert("Posts synced with GitHub!")
+    } catch (err) {
+      console.error(err)
+      alert("Error syncing with GitHub")
+    }
   }
 
   if (showEditor) {
@@ -261,6 +326,20 @@ export default function AdminPage() {
               <p>• Choose appropriate categories to help readers find your content</p>
               <p>• Add featured images to make your posts more visually appealing</p>
               <p>• Use Markdown formatting for rich text (e.g., **bold**, *italic*, [links](url))</p>
+              <div className="space-y-2 pt-4">
+                <Label htmlFor="github-token">GitHub Token</Label>
+                <Input
+                  id="github-token"
+                  type="password"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  placeholder="ghp_..."
+                />
+                <Button onClick={syncToGitHub}>Sync Posts to GitHub</Button>
+                <p className="text-xs text-muted-foreground">
+                  Token is used only in your browser to update <code>posts.json</code>.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
