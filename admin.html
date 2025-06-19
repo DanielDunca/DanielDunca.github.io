@@ -57,6 +57,12 @@
                 <li>Use Markdown-style formatting: **bold**, *italic*, # headings, - lists</li>
                 <li>Mark one post as "Featured" to highlight it on the homepage</li>
             </ul>
+            <div style="margin-top: 1.5rem;">
+                <label for="github-token" style="display:block; margin-bottom:0.5rem;">GitHub Token</label>
+                <input type="password" id="github-token" placeholder="ghp_..." style="width:100%; margin-bottom:0.5rem;">
+                <button class="btn btn-primary" onclick="syncToGitHub()">Sync Posts to GitHub</button>
+                <p style="color:#6b7280; font-size:0.875rem; margin-top:0.5rem;">Token is used only in your browser to update <code>posts.json</code>.</p>
+            </div>
         </div>
     </div>
 
