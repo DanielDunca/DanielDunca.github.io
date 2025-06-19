@@ -1,5 +1,17 @@
 [
   {
+    "id": 1750344871458,
+    "title": "Test",
+    "excerpt": "123",
+    "content": "231",
+    "author": "YDour Name",
+    "category": "Investigation",
+    "image": "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=400&fit=crop",
+    "date": "2025-06-19",
+    "readTime": "1 min read",
+    "featured": false
+  },
+  {
     "id": 1,
     "title": "The Future of Digital Journalism in 2024",
     "excerpt": "Exploring how AI and new technologies are reshaping the landscape of modern journalism and what it means for reporters.",
