@@ -1,3 +1,8 @@
+// GitHub repository info for syncing posts
+const GITHUB_OWNER = "DanielDunca"
+const GITHUB_REPO = "DanielDunca.github.io"
+const GITHUB_BRANCH = "main"
+
 // Blog data storage
 let blogPosts = []
 
@@ -13,11 +18,24 @@ document.addEventListener("DOMContentLoaded", () => {
 })
 
 // Load blog posts from localStorage
-function loadBlogPosts() {
+async function loadBlogPosts() {
   const stored = localStorage.getItem("blogPosts")
   if (stored) {
     blogPosts = JSON.parse(stored)
-  } else {
+  }
+
+  try {
+    const response = await fetch("posts.json?cache=" + Date.now())
+    if (response.ok) {
+      blogPosts = await response.json()
+      saveBlogPosts()
+      return
+    }
+  } catch (err) {
+    console.error("Could not fetch posts.json", err)
+  }
+
+  if (!stored) {
     // Default posts if none exist
     blogPosts = [
       {
@@ -470,4 +488,50 @@ function importPosts(event) {
     }
   }
   reader.readAsText(file)
+}
+
+// Sync posts.json to GitHub using a personal access token
+async function syncToGitHub() {
+  const tokenInput = document.getElementById("github-token")
+  if (!tokenInput) {
+    alert("GitHub token input not found")
+    return
+  }
+  const token = tokenInput.value.trim()
+  if (!token) {
+    alert("Please enter a GitHub token with repo permissions")
+    return
+  }
+
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/posts.json`
+
+  try {
+    const getRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${token}` },
+    })
+    const fileData = await getRes.json()
+    const sha = fileData.sha
+
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(blogPosts, null, 2))))
+
+    const updateRes = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: "Update posts from admin",
+        content,
+        sha,
+        branch: GITHUB_BRANCH,
+      }),
+    })
+
+    if (!updateRes.ok) throw new Error("GitHub update failed")
+    alert("Posts synced with GitHub!")
+  } catch (err) {
+    console.error(err)
+    alert("Error syncing with GitHub")
+  }
 }
